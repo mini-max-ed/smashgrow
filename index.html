@@ -63,6 +63,7 @@ li.open .body{display:block}
 .recommendations summary{cursor:pointer;font-weight:700;font-size:16px;min-height:30px}
 .rec-note{color:var(--dim);font-size:13px;line-height:1.6;margin:8px 0}
 .rec-guide{margin:16px 0;padding-top:4px;border-top:1px solid var(--dim2);font-size:13px;line-height:1.75;color:var(--dim);overflow-wrap:anywhere}
+.rec-guide>summary{font-size:14px;color:var(--ink);min-height:44px;padding:10px 0;cursor:pointer}
 .rec-guide h3{font-size:14px;color:var(--ink);margin:16px 0 6px}
 .rec-guide p{margin:8px 0}.rec-guide strong{color:var(--ink)}
 .rec-guide ul{list-style:disc;padding:0 0 0 20px;margin:8px 0}
@@ -132,8 +133,8 @@ a{color:var(--b)}
  </div>
  <button class="rec-show" id="rec-calculate" type="submit">조합 계산</button>
  </form>
- <section class="rec-guide" aria-label="메모리 조합 찾기 안내">
-  <h3>계산 기준</h3>
+ <details class="rec-guide">
+  <summary>계산 기준</summary>
   <ul>
    <li><strong>물리 중심:</strong> 공격력이 가장 높은 조합</li>
    <li><strong>주문 중심:</strong> 공격 마력이 가장 높은 조합</li>
@@ -148,7 +149,7 @@ a{color:var(--b)}
   <p>보유 여부와 현재 획득 가능 여부에 관계없이 등록된 메모리 전체를 비교합니다. <strong>메모리 코어는 계산에서 제외</strong>되므로, 추천 조합을 참고해 보유한 코어 중 무기·속성·플레이 방식에 맞는 것을 추가해 주세요.</p>
   <h3>업데이트 안내</h3>
   <p>새 메모리가 사이트 목록에 추가되면 조합 검색에도 자동으로 포함됩니다. 다만 게임이나 Game8의 업데이트가 실시간으로 연동되는 것은 아니므로, 최신 메모리가 반영되기까지 시간이 걸릴 수 있습니다.</p>
- </section>
+ </details>
  <p class="rec-note" id="rec-context"></p>
  <div id="rec-results" aria-live="polite"></div>
  <p class="rec-source">슬롯 기준: <a href="https://gamewith.jp/dq-smashgrow/566673" target="_blank" rel="noopener noreferrer">직업 정보 ↗</a> · 메모리 수치: 아래 도감과 동일</p>
