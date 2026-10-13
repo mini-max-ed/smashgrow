@@ -64,7 +64,8 @@ li.open .body{display:block}
 .rec-note{color:var(--dim);font-size:13px;line-height:1.6;margin:8px 0}
 .rec-controls{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
 .rec-controls label{display:flex;align-items:center;gap:6px;font-size:13px}
-.rec-controls select{background:var(--bg);color:var(--ink);padding:9px;border:1px solid var(--dim2);border-radius:5px;font-size:16px}
+.rec-controls input{width:100px}.rec-controls select{max-width:100%}.rec-controls label{max-width:100%;flex-wrap:wrap}
+.rec-controls input,.rec-controls select{background:var(--bg);color:var(--ink);padding:9px;border:1px solid var(--dim2);border-radius:5px;font-size:16px}
 .rec-card{border-top:1px solid var(--dim2);padding:12px 0}
 .rec-card h3{margin:0 0 8px;font-size:15px}
 .rec-slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -76,7 +77,7 @@ li.open .body{display:block}
 .rec-clear{margin:4px 10px}
 .rec-source{font-size:12px;margin:8px 0}
 a{color:var(--b)}
-.rec-tags{color:var(--y);font-size:12px;margin-top:8px}
+.rec-effects{font-size:12px;color:var(--dim);margin-top:6px}.rec-stale{color:var(--y)}
 #list>li{scroll-margin-top:230px}
 @media(min-width:650px){.rec-slots{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style>
@@ -109,15 +110,27 @@ a{color:var(--b)}
   </div>
 </header>
 <details class="recommendations" id="recommendations" open>
- <summary>직업별 추천 장착 조합</summary>
- <p class="rec-note">캐릭터 장착용 · S랭크 기준 · 출처 확인 2026-10-13<br>코스트는 캐릭터 레벨이 아닌 장착 한도입니다. 기본직은 원문 100·150·200 단계, 상급직은 공개된 4칸 조합을 모았습니다. 보유 여부·무기·적에 따른 최적 조합은 달라집니다. 기본직 자료에는 최근 메모리가 반영되지 않았을 수 있습니다.</p>
+ <summary>직업·코스트로 장착 조합 찾기</summary>
+ <p class="rec-note">도감 전체의 S랭크 메모리에서 선택한 능력치 합계가 가장 높은 조합을 찾습니다. 기본직도 고코스트 메모리를 사용할 수 있습니다.</p>
+ <form id="optimizer-form">
  <div class="rec-controls">
-  <label>직업 <select id="rec-job" aria-label="추천 직업"></select></label>
-  <label>코스트 단계 <select id="rec-stage" aria-label="추천 코스트 단계"><option value="all">전체 단계</option><option value="100">100 이하</option><option value="150">150 이하</option><option value="200">200 이하</option><option value="upper">상급직 4칸</option></select></label>
+  <label>직업 <select id="rec-job" aria-label="직업"></select></label>
+  <label>코스트 상한 <input id="rec-budget" aria-label="코스트 상한" type="number" min="0" max="999" step="1" value="200" required inputmode="numeric"></label>
+  <label>공격 유형·목표 <select id="rec-mode" aria-label="공격 유형·목표">
+   <option value="physical">물리 — 공격력 최대 (메탈윙 등)</option>
+   <option value="spell">주문 — 공격 마력 최대</option>
+   <option value="adventure">모험 스킬 — 공격력＋공격 마력 최대</option>
+   <option value="heal">회복 — 회복 마력 최대</option>
+   <option value="hp">생존 — 최대 HP 최대</option>
+  </select></label>
+  <label>꼭 넣을 메모리 <select id="rec-required" aria-label="꼭 넣을 메모리"><option value="">지정 안 함</option></select></label>
  </div>
+ <button class="rec-show" id="rec-calculate" type="submit">조합 계산</button>
+ </form>
+ <p class="rec-note">색 일치·무지개 칸은 능력치 ×1.2, 같은 메모리는 한 번만 사용합니다. 특수효과의 대미지 %·속성·직업 조건·스킬 배율은 점수에 포함하지 않으므로 실제 대미지 최강을 보장하지 않습니다. 원하는 스킬이나 효과는 ‘꼭 넣을 메모리’로 지정해 비교하세요. 보유 여부와 현재 획득 가능 여부는 제한하지 않습니다.</p>
  <p class="rec-note" id="rec-context"></p>
  <div id="rec-results" aria-live="polite"></div>
- <p class="rec-source"><a href="https://gamewith.jp/dq-smashgrow/558001" target="_blank" rel="noopener noreferrer">보유 메모리·코스트로 직접 조합 찾기 ↗</a></p>
+ <p class="rec-source">슬롯 기준: <a href="https://gamewith.jp/dq-smashgrow/566673" target="_blank" rel="noopener noreferrer">직업 정보 ↗</a> · 메모리 수치: 아래 도감과 동일</p>
 </details>
 <button class="rec-clear" id="rec-clear" type="button" hidden>추천 조합 필터 해제</button>
 
@@ -138,14 +151,59 @@ const DATA = [{"c":"스토리","n":"001","name":"시작의 메모리","r":"희�
 const CV={노랑:"var(--y)",파랑:"var(--b)",빨강:"var(--rd)",초록:"var(--g)",보라:"var(--p)"};
 const SN=["최대 HP","공격력","공격 마력","회복 마력","수비력","주문 수비력","재주"];
 
-const RECOMMENDATIONS = [{"name":"전사","slots":["무지개","노랑","노랑"],"source":"https://game8.jp/dqsmashgrow/780984","publisher":"Game8","note":"물리 중심. 100 단계는 풍속성 검, 150 단계는 불꽃의 검과의 궁합을 언급한 원문 추천입니다.","sets":[{"cap":100,"names":["미니 데몬","드라키마","골렘"],"total":100},{"cap":150,"names":["머미","골드 오크","슬라임 나이트"],"total":149},{"cap":200,"names":["레몬 슬라임","프로토 킬러","거대 전갈"],"total":199}]},{"name":"마법사","slots":["무지개","보라","보라"],"source":"https://game8.jp/dqsmashgrow/780983","publisher":"Game8","note":"주문 중심의 원문 추천. 무기의 속성 및 모험 스킬에 따라 교체하세요.","sets":[{"cap":100,"names":["베이비 매지션","라임 슬라임","독화살 두건"],"total":97},{"cap":150,"names":["머미","베호임 슬라임","라임 슬라임"],"total":150},{"cap":200,"names":["악마 신관","베호임 슬라임","라임 슬라임"],"total":176}]},{"name":"승려","slots":["무지개","초록","초록"],"source":"https://game8.jp/dqsmashgrow/780982","publisher":"Game8","note":"주문·회복 중심. 200 단계는 얼음 지팡이와의 궁합을 고려한 조합입니다. 메탈윙 등 물리 무기의 최적 조합을 뜻하지 않습니다.","sets":[{"cap":100,"names":["라임 슬라임","베이비 매지션","수풀 드라키"],"total":92},{"cap":150,"names":["베호임 슬라임","빅 해머","베이비 매지션"],"total":150},{"cap":200,"names":["베호임 슬라임","아이스 골렘","빅 해머"],"total":200}]},{"name":"무투가","slots":["무지개","빨강","빨강"],"source":"https://game8.jp/dqsmashgrow/780981","publisher":"Game8","note":"HP와 공격력을 중시한 물리 중심 원문 추천입니다.","sets":[{"cap":100,"names":["골렘","미니 데몬","브라우니"],"total":99},{"cap":150,"names":["머미","미니 데몬","플레임"],"total":149},{"cap":200,"names":["프로토 킬러","악마 신관","브라우니"],"total":199}]},{"name":"도적","slots":["무지개","파랑","파랑"],"source":"https://game8.jp/dqsmashgrow/780980","publisher":"Game8","note":"물리 중심. 화식조의 염속성 강화는 불꽃의 검에 유리하며, 무속성 무기에는 직접 도움이 되지 않습니다.","sets":[{"cap":100,"names":["미니 데몬","스마일 록","릴리펏"],"total":100},{"cap":150,"names":["미니 데몬","머미","화식조"],"total":150},{"cap":200,"names":["프로토 킬러","머미","화식조"],"total":184}]},{"name":"팔라딘","slots":["무지개","노랑·초록","노랑·초록","노랑·초록"],"source":"https://gamewith.jp/dq-smashgrow/566948","publisher":"GameWith","note":"공격력과 공격 마력을 중시한 4칸 추천. 코스트 단계별 조합은 확인한 출처에 없습니다.","sets":[{"cap":null,"names":["대마왕 데스타무아","노왕 데스타무아","킬러 머신","빅 해머"],"total":344}]},{"name":"현자","slots":["무지개","보라·초록","보라·초록","보라·초록"],"source":"https://gamewith.jp/dq-smashgrow/568933","publisher":"GameWith","note":"무도 군단은 칼베로 뷰트(뇌속성 채찍) 운용을 전제로 한 원문 추천입니다. 코스트 단계별 조합은 확인한 출처에 없습니다.","sets":[{"cap":null,"names":["대마왕 데스타무아","무도","용왕","무도 군단"],"total":361}]},{"name":"레인저","slots":["무지개","빨강·파랑","빨강·파랑","빨강·파랑"],"source":"https://gamewith.jp/dq-smashgrow/571028","publisher":"GameWith","note":"공격력과 공격 마력을 중시한 4칸 추천. 채찍 운용 시 무지개 칸을 용왕·무도로 바꾸는 안도 원문에 있습니다. 단계별 조합은 확인한 출처에 없습니다.","sets":[{"cap":null,"names":["킬러 머신","대마왕 데스타무아","듀란","기간테스"],"total":383}]}];
+const JOBS = [
+ {name:'전사',slots:['무지개','노랑','노랑']},
+ {name:'마법사',slots:['무지개','보라','보라']},
+ {name:'승려',slots:['무지개','초록','초록']},
+ {name:'무투가',slots:['무지개','빨강','빨강']},
+ {name:'도적',slots:['무지개','파랑','파랑']},
+ {name:'팔라딘',slots:['무지개','노랑·초록','노랑·초록','노랑·초록']},
+ {name:'현자',slots:['무지개','보라·초록','보라·초록','보라·초록']},
+ {name:'레인저',slots:['무지개','빨강·파랑','빨강·파랑','빨강·파랑']}
+];
+const MODES={physical:{label:'공격력',indices:[1]},spell:{label:'공격 마력',indices:[2]},adventure:{label:'공격력＋공격 마력',indices:[1,2]},heal:{label:'회복 마력',indices:[3]},hp:{label:'최대 HP',indices:[0]}};
 let recNames=null;
 const memoryByName=new Map(DATA.map(d=>[d.name,d]));
-function recLabel(s){return s.cap?`코스트 ${s.cap} 이하`:`4칸 추천 · 필요 코스트 ${s.total}`}
-function recTags(name){
- const tags=[];
- for(const j of RECOMMENDATIONS)for(const s of j.sets)if(s.names.includes(name))tags.push(`${j.name} ${s.cap||'4칸'}`);
- return tags.length?`<div class="rec-tags">추천 장착: ${tags.join(' · ')}</div>`:'';
+const slotFactor=(slot,d)=>slot==='무지개'||slot.includes(d.col)?12:10;
+const fmt=n=>Number(n.toFixed(1)).toLocaleString('ko-KR');
+// Exact multiple-choice slot/budget DP. Descending masks prevent reusing an item.
+// Integer tenths retain the 1.2 colour bonus without floating-point comparisons.
+function optimizeMemories(items,slots,limit,mode,required=''){
+ if(!Number.isInteger(limit)||limit<0||!MODES[mode])return null;
+ const n=slots.length,full=(1<<n)-1;
+ const budget=Math.min(limit,items.map(d=>d.cost).sort((a,b)=>b-a).slice(0,n).reduce((a,b)=>a+b,0));
+ const width=budget+1,states=(1<<n)*width;
+ const scores=new Float64Array(states);scores.fill(-1);
+ const paths=new Int16Array(states*n);paths.fill(-1);
+ const value=(d,slot)=>MODES[mode].indices.reduce((s,k)=>s+d.s[k],0)*slotFactor(slot,d);
+ const fixed=required?items.findIndex(d=>d.name===required):-1;
+ if(required&&(fixed<0||items[fixed].cost>budget))return null;
+ if(fixed>=0){for(let slot=0;slot<n;slot++){
+  const key=(1<<slot)*width+items[fixed].cost;
+  scores[key]=value(items[fixed],slots[slot]);paths[key*n+slot]=fixed;
+ }}else scores[0]=0;
+ items.forEach((d,id)=>{
+  if(id===fixed||d.cost>budget)return;
+  for(let mask=full-1;mask>=0;mask--)for(let cost=budget-d.cost;cost>=0;cost--){
+   const from=mask*width+cost;if(scores[from]<0)continue;
+   for(let slot=0;slot<n;slot++)if(!(mask&(1<<slot))){
+    const to=(mask|(1<<slot))*width+cost+d.cost;
+    const score=scores[from]+value(d,slots[slot]);
+    if(score>scores[to]){
+     scores[to]=score;
+     for(let k=0;k<n;k++)paths[to*n+k]=paths[from*n+k];
+     paths[to*n+slot]=id;
+    }
+   }
+  }
+ });
+ let best=-1;
+ for(let cost=0;cost<=budget;cost++){
+  const key=full*width+cost;
+  if(scores[key]>=0&&(best<0||scores[key]>scores[best]))best=key;
+ }
+ if(best<0)return null;
+ return {items:Array.from(paths.slice(best*n,best*n+n),id=>items[id]),cost:best%width,score:scores[best]/10};
 }
 function showRecommended(names,focusName){
  recNames=new Set(names);q='';fcol='';fpri='0';$('#q').value='';
@@ -154,28 +212,26 @@ function showRecommended(names,focusName){
  const row=Array.from($('#list').children).find(el=>el.dataset.name===(focusName||names[0]));
  if(row){row.classList.add('open');row.scrollIntoView({block:'start',behavior:'smooth'});}
 }
-function renderRecommendations(){
- const j=RECOMMENDATIONS.find(j=>j.name===$('#rec-job').value);
- const stage=$('#rec-stage').value;
- $('#rec-context').textContent=j.note;
- const sets=j.sets.filter(s=>stage==='all'||(stage==='upper'?s.cap===null:s.cap===Number(stage)));
+function calculateRecommendations(){
+ const j=JOBS.find(j=>j.name===$('#rec-job').value),limit=Number($('#rec-budget').value),mode=$('#rec-mode').value;
  const root=$('#rec-results');root.innerHTML='';
- if(!sets.length){root.innerHTML='<p class="rec-note">이 직업의 선택한 코스트 단계는 출처에서 확인되지 않았습니다. 전체 단계를 선택하거나 아래 조합 시뮬레이터를 이용하세요.</p>';return;}
- for(const s of sets){
-  const card=document.createElement('article');card.className='rec-card';
-  card.innerHTML=`<h3>${recLabel(s)} <small>· 실제 합계 ${s.total}</small></h3><div class="rec-slots"></div>`;
-  const slots=card.querySelector('.rec-slots');
-  s.names.forEach((name,i)=>{
-   const d=memoryByName.get(name),slot=document.createElement('div');slot.className='rec-slot';
-   const matched=j.slots[i]==='무지개'||j.slots[i].includes(d.col);
-   slot.innerHTML=`<small>${i===0?'메인':'서브 '+i} · ${j.slots[i]} 칸</small><button type="button">${name}</button><small>${d.col} · 코스트 ${d.cost} · ${matched?'색 일치':'색 불일치'}</small>`;
-   slot.querySelector('button').addEventListener('click',()=>showRecommended([name],name));slots.appendChild(slot);
-  });
-  const btn=document.createElement('button');btn.type='button';btn.className='rec-show';btn.textContent='이 조합만 도감에서 보기';btn.addEventListener('click',()=>showRecommended(s.names));card.appendChild(btn);
-  const source=document.createElement('p');source.className='rec-source';source.innerHTML=`<a href="${j.source}" target="_blank" rel="noopener noreferrer">${j.publisher} 원문 추천 ↗</a>`;card.appendChild(source);root.appendChild(card);
- }
+ const result=optimizeMemories(DATA,j.slots,limit,mode,$('#rec-required').value);
+ $('#rec-context').textContent=`${j.name} · ${j.slots.length}칸 · 코스트 상한 ${limit} · 도감 ${DATA.length}개에서 계산`;
+ $('#rec-context').classList.remove('rec-stale');
+ if(!result){root.innerHTML='<p class="rec-note">이 조건으로 모든 슬롯을 채울 수 없습니다. 코스트 상한을 높이거나 필수 메모리를 해제하세요.</p>';return;}
+ const card=document.createElement('article');card.className='rec-card';
+ card.innerHTML=`<h3>${MODES[mode].label} 최대 ${fmt(result.score)} · 코스트 ${result.cost} / ${limit}</h3><p class="rec-note">메모리가 제공하는 수치만 합산합니다. 색 보정 후 소수는 표시용 이론값이며 게임 내 정수 처리와 차이가 있을 수 있습니다. 동점이면 낮은 코스트를 우선합니다.</p><div class="rec-slots"></div>`;
+ const slots=card.querySelector('.rec-slots'),total=Array(7).fill(0);
+ result.items.forEach((d,i)=>{
+  const factor=slotFactor(j.slots[i],d)/10;d.s.forEach((v,k)=>total[k]+=v*factor);
+  const slot=document.createElement('div');slot.className='rec-slot';
+  slot.innerHTML=`<small>${i===0?'메인':'서브 '+i} · ${j.slots[i]} 칸</small><button type="button">${d.name}</button><small>${d.col} · 코스트 ${d.cost} · ×${factor}</small><div class="rec-effects">${d.e.join('<br>')}</div>`;
+  slot.querySelector('button').addEventListener('click',()=>showRecommended([d.name],d.name));slots.appendChild(slot);
+ });
+ const stats=document.createElement('div');stats.className='stats';stats.innerHTML=total.map((v,k)=>`<div>${SN[k]}<b>${fmt(v)}</b></div>`).join('');card.appendChild(stats);
+ const btn=document.createElement('button');btn.type='button';btn.className='rec-show';btn.textContent='이 조합만 도감에서 보기';btn.addEventListener('click',()=>showRecommended(result.items.map(d=>d.name)));card.appendChild(btn);
+ root.appendChild(card);
 }
-
 let fcol="", fpri="0", q="", sort="p";
 const $=s=>document.querySelector(s);
 const TO={SS:6,S:5,A:4,B:3,C:2,D:1};
@@ -213,7 +269,7 @@ function render(){
     <div class="body">
       <ul class="eff">${d.e.map(e=>`<li>${e}</li>`).join("")}</ul>
       <div class="stats">${d.s.map((v,i)=>`<div>${SN[i]}<b>${v}</b></div>`).join("")}<div class="tot">능력치 합계<b>${d.t}</b></div></div>
-      ${recTags(d.name)}
+
       <div class="src">
         <p><span>획득처</span>${d.src}</p>
         ${d.st?`<p><span>드롭 스테이지</span>${d.st}</p>`:""}
@@ -231,11 +287,15 @@ chips("#fcol",v=>fcol=v); chips("#fpri",v=>fpri=v);
 $("#q").addEventListener("input",e=>{q=e.target.value.trim().toLowerCase();render()});
 $("#clr").addEventListener("click",()=>{$("#q").value="";q="";render();$("#q").focus()});
 $("#sort").addEventListener("change",e=>{sort=e.target.value;render()});
-for(const j of RECOMMENDATIONS){const o=document.createElement('option');o.value=j.name;o.textContent=j.name;$('#rec-job').appendChild(o);}
-$('#rec-job').addEventListener('change',()=>{ $('#rec-stage').value='all';recNames=null;$('#rec-clear').hidden=true;render();renderRecommendations(); });
-$('#rec-stage').addEventListener('change',renderRecommendations);
+for(const j of JOBS){const o=document.createElement('option');o.value=j.name;o.textContent=j.name;$('#rec-job').appendChild(o);}
+for(const d of [...DATA].sort((a,b)=>a.name.localeCompare(b.name,'ko'))){const o=document.createElement('option');o.value=d.name;o.textContent=`${d.name} (${d.cost})`;$('#rec-required').appendChild(o);}
+$('#optimizer-form').addEventListener('submit',e=>{e.preventDefault();calculateRecommendations();});
+$('#optimizer-form').addEventListener('input',()=>{
+ $('#rec-results').innerHTML='';$('#rec-context').textContent='조건이 바뀌었습니다. 조합 계산을 눌러주세요.';$('#rec-context').classList.add('rec-stale');
+ recNames=null;$('#rec-clear').hidden=true;render();
+});
 $('#rec-clear').addEventListener('click',()=>{recNames=null;$('#rec-clear').hidden=true;render();});
-renderRecommendations();
+calculateRecommendations();
 render();
 </script>
 </body>
